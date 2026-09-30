@@ -1,0 +1,721 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Alphabet Order Game</title>
+
+<style>
+    * {
+        box-sizing: border-box;
+    }
+
+    body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: white;
+        overflow: hidden;
+    }
+
+    .game {
+        width: 100%;
+        max-width: 1100px;
+        margin: 0 auto;
+        text-align: center;
+        padding: 10px;
+    }
+
+    h1 {
+        font-size: 32px;
+        margin: 5px 0;
+    }
+
+    .instructions {
+        font-size: 20px;
+        margin-bottom: 8px;
+    }
+
+    .progress {
+        font-size: 18px;
+        font-weight: bold;
+        margin-bottom: 10px;
+    }
+
+    /* Alphabet Slots */
+    .slots {
+        display: grid;
+        grid-template-columns: repeat(13, 1fr);
+        gap: 6px;
+        width: 100%;
+        margin: 0 auto 18px;
+    }
+
+    .slot {
+        aspect-ratio: 1;
+        border: 2px dashed #999;
+        border-radius: 8px;
+        background: #f8f8f8;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        font-size: 22px;
+        font-weight: bold;
+        color: #777;
+
+        transition: 0.2s;
+    }
+
+    .slot.correct {
+        border: 2px solid #4CAF50;
+        background: #e8f8e8;
+        color: #222;
+    }
+
+    /* Letters */
+    .letters {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: center;
+        align-items: center;
+        gap: 9px;
+
+        min-height: 65px;
+        padding: 10px;
+
+        border-radius: 12px;
+        background: #f1f1f1;
+    }
+
+    .letter {
+        width: 44px;
+        height: 44px;
+
+        border: 2px solid #555;
+        border-radius: 9px;
+
+        /* Solid rainbow background */
+        background: #FF0000;
+
+        display: flex;
+        align-items: center;
+        justify-content: center;
+
+        /* BLACK letter */
+        color: #000000;
+
+        font-size: 25px;
+        font-weight: bold;
+
+        cursor: grab;
+        user-select: none;
+
+        transition: transform 0.15s;
+    }
+
+    .letter:hover {
+        transform: scale(1.1);
+    }
+
+    .letter:active {
+        cursor: grabbing;
+    }
+
+    .message {
+        height: 30px;
+        margin-top: 8px;
+
+        font-size: 20px;
+        font-weight: bold;
+    }
+
+    /* Completion Screen */
+    .completion {
+        display: none;
+
+        position: fixed;
+        top: 0;
+        left: 0;
+
+        width: 100%;
+        height: 100%;
+
+        background: rgba(255, 255, 255, 0.96);
+
+        z-index: 1000;
+
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+
+        text-align: center;
+    }
+
+    .completion h2 {
+        font-size: 52px;
+        color: #222;
+        margin: 10px;
+        animation: pop 0.6s ease;
+    }
+
+    .completion p {
+        font-size: 28px;
+        margin: 5px 0 25px;
+    }
+
+    .play-again {
+        font-size: 25px;
+        font-weight: bold;
+
+        padding: 14px 30px;
+
+        border: none;
+        border-radius: 12px;
+
+        background: #4CAF50;
+        color: white;
+
+        cursor: pointer;
+    }
+
+    .play-again:hover {
+        background: #388E3C;
+        transform: scale(1.05);
+    }
+
+    @keyframes pop {
+        0% {
+            transform: scale(0.3);
+            opacity: 0;
+        }
+
+        70% {
+            transform: scale(1.15);
+        }
+
+        100% {
+            transform: scale(1);
+            opacity: 1;
+        }
+    }
+
+    /* Confetti */
+    .confetti {
+        position: fixed;
+
+        width: 10px;
+        height: 16px;
+
+        top: -20px;
+
+        z-index: 2000;
+
+        animation: fall linear forwards;
+    }
+
+    @keyframes fall {
+        0% {
+            transform: translateY(0) rotate(0deg);
+            opacity: 1;
+        }
+
+        100% {
+            transform: translateY(110vh) rotate(720deg);
+            opacity: 0;
+        }
+    }
+
+    /* Smaller screens */
+    @media (max-width: 700px) {
+
+        h1 {
+            font-size: 26px;
+        }
+
+        .instructions {
+            font-size: 17px;
+        }
+
+        .slots {
+            gap: 3px;
+        }
+
+        .slot {
+            font-size: 16px;
+        }
+
+        .letter {
+            width: 36px;
+            height: 36px;
+            font-size: 20px;
+        }
+
+        .completion h2 {
+            font-size: 38px;
+        }
+    }
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+    <h1>Alphabet Order</h1>
+
+    <div class="instructions">
+        Drag each letter to the correct spot!
+    </div>
+
+    <div class="progress" id="progress">
+        0 / 26 letters
+    </div>
+
+    <!-- Alphabet Slots -->
+    <div class="slots" id="slots"></div>
+
+    <!-- Randomized Letters -->
+    <div class="letters" id="letters"></div>
+
+    <div class="message" id="message"></div>
+
+</div>
+
+
+<!-- Completion Screen -->
+<div class="completion" id="completion">
+
+    <h2>You Completed The Alphabet!</h2>
+
+    <p>Great job! 🎉⭐🎉</p>
+
+    <button class="play-again" id="playAgain">
+        Play Again
+    </button>
+
+</div>
+
+
+<script>
+
+const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+
+/* Rainbow colors */
+const rainbowColors = [
+    "#FF0000",  /* Red */
+    "#FF7F00",  /* Orange */
+    "#FFD700",  /* Yellow */
+    "#00AA00",  /* Green */
+    "#00AEEF",  /* Blue */
+    "#0000FF",  /* Indigo */
+    "#8B00FF"   /* Violet */
+];
+
+
+let completed = 0;
+let draggedLetter = null;
+
+
+/* --------------------------------
+   SHUFFLE
+-------------------------------- */
+
+function shuffle(array) {
+
+    const copy = [...array];
+
+    for (let i = copy.length - 1; i > 0; i--) {
+
+        const j = Math.floor(Math.random() * (i + 1));
+
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+
+    }
+
+    return copy;
+}
+
+
+/* --------------------------------
+   CREATE GAME
+-------------------------------- */
+
+function buildGame() {
+
+    completed = 0;
+    draggedLetter = null;
+
+    document.getElementById("progress").textContent =
+        "0 / 26 letters";
+
+    document.getElementById("message").textContent =
+        "";
+
+    document.getElementById("completion").style.display =
+        "none";
+
+
+    const slots = document.getElementById("slots");
+    const letters = document.getElementById("letters");
+
+
+    slots.innerHTML = "";
+    letters.innerHTML = "";
+
+
+    /* ------------------------------
+       CREATE 26 SLOTS
+    ------------------------------ */
+
+    alphabet.forEach((letter, index) => {
+
+        const slot = document.createElement("div");
+
+        slot.className = "slot";
+
+        slot.dataset.letter = letter;
+
+        slot.textContent = index + 1;
+
+
+        /* Allow dropping */
+
+        slot.addEventListener("dragover", function(event) {
+
+            event.preventDefault();
+
+        });
+
+
+        /* Check dropped letter */
+
+        slot.addEventListener("drop", function(event) {
+
+            event.preventDefault();
+
+            if (!draggedLetter) return;
+
+            checkLetter(draggedLetter, slot);
+
+        });
+
+
+        slots.appendChild(slot);
+
+    });
+
+
+    /* ------------------------------
+       CREATE RANDOM LETTERS
+    ------------------------------ */
+
+    const shuffledLetters = shuffle(alphabet);
+
+
+    shuffledLetters.forEach(function(letter) {
+
+        const letterBox = document.createElement("div");
+
+        letterBox.className = "letter";
+
+        letterBox.textContent = letter;
+
+        letterBox.dataset.letter = letter;
+
+        letterBox.draggable = true;
+
+
+        /* ------------------------------
+           RANDOM SOLID RAINBOW COLOR
+        ------------------------------ */
+
+        const randomColor =
+            rainbowColors[
+                Math.floor(
+                    Math.random() * rainbowColors.length
+                )
+            ];
+
+
+        /*
+           Solid color background
+        */
+
+        letterBox.style.backgroundColor =
+            randomColor;
+
+
+        /*
+           Keep the letter BLACK
+        */
+
+        letterBox.style.color =
+            "#000000";
+
+
+        /*
+           Dark border around the square
+        */
+
+        letterBox.style.borderColor =
+            "#555";
+
+
+        /* Start dragging */
+
+        letterBox.addEventListener(
+            "dragstart",
+            function() {
+
+                draggedLetter = letterBox;
+
+            }
+        );
+
+
+        /* Stop dragging */
+
+        letterBox.addEventListener(
+            "dragend",
+            function() {
+
+                draggedLetter = null;
+
+            }
+        );
+
+
+        letters.appendChild(letterBox);
+
+    });
+
+}
+
+
+/* --------------------------------
+   CHECK LETTER
+-------------------------------- */
+
+function checkLetter(letterElement, slot) {
+
+    const letter =
+        letterElement.dataset.letter;
+
+    const correctLetter =
+        slot.dataset.letter;
+
+
+    /* ------------------------------
+       CORRECT LETTER
+    ------------------------------ */
+
+    if (letter === correctLetter) {
+
+        slot.textContent = letter;
+
+        slot.classList.add("correct");
+
+
+        /*
+           Keep the completed letter BLACK
+        */
+
+        slot.style.color = "#000000";
+
+
+        /*
+           Remove the letter
+           from the bottom
+        */
+
+        letterElement.remove();
+
+
+        completed++;
+
+
+        document.getElementById("progress").textContent =
+            completed + " / 26 letters";
+
+
+        document.getElementById("message").textContent =
+            "Correct! 🎉";
+
+
+        /* ------------------------------
+           CHECK FOR COMPLETION
+        ------------------------------ */
+
+        if (completed === 26) {
+
+            setTimeout(function() {
+
+                showCompletion();
+
+            }, 400);
+
+        }
+
+    }
+
+
+    /* ------------------------------
+       WRONG LETTER
+    ------------------------------ */
+
+    else {
+
+        document.getElementById("message").textContent =
+            "Try again!";
+
+    }
+
+
+    draggedLetter = null;
+
+}
+
+
+/* --------------------------------
+   COMPLETION
+-------------------------------- */
+
+function showCompletion() {
+
+    document.getElementById("completion").style.display =
+        "flex";
+
+    createConfetti();
+
+}
+
+
+/* --------------------------------
+   CONFETTI
+-------------------------------- */
+
+function createConfetti() {
+
+    const colors = [
+
+        "#FF0000",
+        "#FF7F00",
+        "#FFD700",
+        "#00AA00",
+        "#00AEEF",
+        "#0000FF",
+        "#8B00FF",
+        "#FF69B4"
+
+    ];
+
+
+    /* Create 120 confetti pieces */
+
+    for (let i = 0; i < 120; i++) {
+
+        const piece =
+            document.createElement("div");
+
+
+        piece.className =
+            "confetti";
+
+
+        /* Random horizontal position */
+
+        piece.style.left =
+            Math.random() * 100 + "vw";
+
+
+        /* Random rainbow color */
+
+        piece.style.backgroundColor =
+            colors[
+                Math.floor(
+                    Math.random() * colors.length
+                )
+            ];
+
+
+        /* Random size */
+
+        piece.style.width =
+            (Math.random() * 8 + 6) + "px";
+
+        piece.style.height =
+            (Math.random() * 12 + 8) + "px";
+
+
+        /* Random falling speed */
+
+        piece.style.animationDuration =
+            (Math.random() * 2 + 2) + "s";
+
+
+        /* Random starting delay */
+
+        piece.style.animationDelay =
+            (Math.random() * 0.8) + "s";
+
+
+        document.body.appendChild(piece);
+
+
+        /* Remove confetti after animation */
+
+        setTimeout(function() {
+
+            piece.remove();
+
+        }, 4000);
+
+    }
+
+}
+
+
+/* --------------------------------
+   PLAY AGAIN
+-------------------------------- */
+
+document.getElementById("playAgain")
+    .addEventListener(
+        "click",
+        function() {
+
+            /*
+               Remove any remaining confetti
+            */
+
+            document
+                .querySelectorAll(".confetti")
+                .forEach(function(piece) {
+
+                    piece.remove();
+
+                });
+
+
+            /*
+               Start a new game
+            */
+
+            buildGame();
+
+        }
+    );
+
+
+/* --------------------------------
+   START GAME
+-------------------------------- */
+
+buildGame();
+
+</script>
+
+</body>
+</html>
